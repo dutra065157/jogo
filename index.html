@@ -6,6 +6,14 @@
     <title>Fortune Tiger - Jogo do Tigrinho</title>
     <style>
       :root {
+        box-sizing: border-box;
+      }
+      *,
+      *:before,
+      *:after {
+        box-sizing: inherit;
+      }
+      :root {
         --gold: #ffd700;
         --dark-red: #8b0000;
         --bright-red: #ff4d4d;
@@ -22,12 +30,13 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         overflow: hidden;
       }
 
       #game-container {
-        width: 400px;
+        width: 100%;
+        max-width: 420px;
         background: linear-gradient(180deg, var(--dark-red) 0%, #4a0000 100%);
         border: 5px solid var(--gold);
         border-radius: 20px;
@@ -36,6 +45,10 @@
           inset 0 0 20px rgba(255, 215, 0, 0.3);
         padding: 20px;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        max-height: 100vh;
+        margin: 0 auto;
       }
 
       /* Header UI */
@@ -44,7 +57,7 @@
         justify-content: space-between;
         margin-bottom: 20px;
         background: var(--glass);
-        padding: 10px;
+        padding: 8px;
         border-radius: 10px;
         border: 1px solid var(--gold);
       }
@@ -71,9 +84,10 @@
         padding: 15px;
         border-radius: 15px;
         border: 3px solid #333;
-        height: 300px;
+        min-height: 280px;
         position: relative;
         overflow: hidden;
+        flex-grow: 1;
       }
 
       .reel {
@@ -88,12 +102,12 @@
       }
 
       .symbol {
-        height: 90px;
+        height: 33.33%;
         width: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 50px;
+        font-size: clamp(35px, 12vw, 55px);
         transition:
           transform 0.2s,
           filter 0.2s;
@@ -125,6 +139,7 @@
         grid-template-columns: 1fr 1.5fr 1fr;
         gap: 15px;
         align-items: center;
+        padding-bottom: 5px;
       }
 
       .bet-control {
@@ -272,6 +287,33 @@
         font-size: 16px;
         border-bottom: 1px solid var(--glass);
         padding-bottom: 5px;
+      }
+
+      /* Ajustes Específicos para Mobile */
+      @media (max-width: 450px) {
+        #game-container {
+          border-radius: 0;
+          height: 100vh;
+          max-height: 100vh;
+          padding: 10px;
+          border-left: none;
+          border-right: none;
+        }
+        .header {
+          margin-bottom: 10px;
+        }
+        .slot-machine {
+          padding: 8px;
+          gap: 5px;
+        }
+        .controls {
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .spin-btn {
+          height: 60px;
+          width: 60px;
+        }
       }
     </style>
   </head>
