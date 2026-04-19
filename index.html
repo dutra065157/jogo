@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fortune Tiger - Jogo do Tigrinho</title>
+    <style>
+      :root {
+        --gold: #ffd700;
+        --dark-red: #8b0000;
+        --bright-red: #ff4d4d;
+        --tiger-orange: #ff8c00;
+        --glass: rgba(255, 255, 255, 0.1);
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(circle, #4a0000 0%, #220000 100%);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #game-container {
+        width: 400px;
+        background: linear-gradient(180deg, var(--dark-red) 0%, #4a0000 100%);
+        border: 5px solid var(--gold);
+        border-radius: 20px;
+        box-shadow:
+          0 0 50px rgba(0, 0, 0, 0.8),
+          inset 0 0 20px rgba(255, 215, 0, 0.3);
+        padding: 20px;
+        position: relative;
+      }
+
+      /* Header UI */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        background: var(--glass);
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--gold);
+      }
+
+      .stat-box {
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: var(--gold);
+      }
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      /* Slot Machine Grid */
+      .slot-machine {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        background: #111;
+        padding: 15px;
+        border-radius: 15px;
+        border: 3px solid #333;
+        height: 300px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .reel {
+        background: linear-gradient(180deg, #222 0%, #111 50%, #222 100%);
+        border-radius: 8px;
+        height: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.1s;
+      }
+
+      .symbol {
+        height: 90px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 50px;
+        transition:
+          transform 0.2s,
+          filter 0.2s;
+      }
+
+      .symbol.win-highlight {
+        transform: scale(1.2);
+        filter: drop-shadow(0 0 10px var(--gold));
+        z-index: 10;
+      }
+
+      .symbol.wild-sticky {
+        animation: pulse-gold 1s infinite alternate;
+      }
+
+      @keyframes pulse-gold {
+        from {
+          filter: drop-shadow(0 0 5px var(--gold));
+        }
+        to {
+          filter: drop-shadow(0 0 20px var(--gold));
+        }
+      }
+
+      /* Controls */
+      .controls {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1.5fr 1fr;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .bet-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--glass);
+        border-radius: 20px;
+        padding: 5px 10px;
+      }
+
+      .btn-round {
+        background: var(--gold);
+        border: none;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .spin-btn {
+        background: radial-gradient(circle, var(--gold) 0%, #ccac00 100%);
+        border: none;
+        height: 70px;
+        width: 70px;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        transition: 0.2s;
+        margin: 0 auto;
+      }
+
+      .spin-btn:hover {
+        transform: scale(1.05);
+      }
+      .spin-btn:active {
+        transform: scale(0.95);
+      }
+      .spin-btn:disabled {
+        filter: grayscale(1);
+        cursor: not-allowed;
+      }
+
+      .auto-btn {
+        background: #ddd;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .mute-btn {
+        background: var(--glass);
+        border: 1px solid var(--gold);
+        color: var(--gold);
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .win-display {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: var(--gold);
+        padding: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--gold);
+        font-size: 24px;
+        font-weight: bold;
+        display: none;
+        z-index: 100;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      /* Payline Overlay */
+      .line-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      /* Efeito de Moedas */
+      .coin-particle {
+        position: absolute;
+        top: -20px;
+        width: 15px;
+        height: 15px;
+        background: radial-gradient(circle, #ffd700, #b8860b);
+        border-radius: 50%;
+        box-shadow:
+          inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+          0 0 5px gold;
+        z-index: 1000;
+        pointer-events: none;
+      }
+
+      @keyframes coin-fall {
+        0% {
+          transform: translateY(0) rotateY(0deg);
+        }
+        100% {
+          transform: translateY(450px) rotateY(720deg);
+        }
+      }
+
+      /* Tabela de Pagamentos Overlay */
+      .paytable-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 200;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        border: 2px solid var(--gold);
+      }
+      .paytable-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        padding: 15px;
+        width: 90%;
+      }
+      .paytable-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 16px;
+        border-bottom: 1px solid var(--glass);
+        padding-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div class="header">
+        <div class="stat-box">
+          <div class="stat-label">Saldo</div>
+          <div class="stat-value" id="balance">R$ 1000,00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Ganhos</div>
+          <div class="stat-value" id="last-win">R$ 0,00</div>
+        </div>
+        <div
+          class="stat-box"
+          style="display: flex; align-items: center; gap: 5px"
+        >
+          <button
+            class="mute-btn"
+            id="info-button"
+            onclick="game.togglePaytable()"
+          >
+            ℹ️
+          </button>
+          <button
+            class="mute-btn"
+            id="mute-button"
+            onclick="game.toggleSound()"
+          >
+            🔊
+          </button>
+        </div>
+      </div>
+
+      <div id="paytable" class="paytable-overlay">
+        <h2 style="color: var(--gold); margin-top: 0">Pagamentos</h2>
+        <div class="paytable-grid" id="paytable-grid"></div>
+        <button
+          class="auto-btn"
+          style="margin-top: 15px"
+          onclick="game.togglePaytable()"
+        >
+          FECHAR
+        </button>
+      </div>
+
+      <div class="slot-machine" id="slot-grid">
+        <canvas class="line-canvas" id="line-canvas"></canvas>
+        <div class="reel" id="reel-0"></div>
+        <div class="reel" id="reel-1"></div>
+        <div class="reel" id="reel-2"></div>
+        <div class="win-display" id="big-win-msg">VITÓRIA!<br />x10</div>
+      </div>
+
+      <div class="controls">
+        <div class="bet-control">
+          <button class="btn-round" onclick="game.adjustBet(-1)">-</button>
+          <span id="bet-value">R$ 1.00</span>
+          <button class="btn-round" onclick="game.adjustBet(1)">+</button>
+        </div>
+
+        <button class="spin-btn" id="spin-button" onclick="game.spin()">
+          GIRAR
+        </button>
+
+        <button class="auto-btn" id="auto-button" onclick="game.toggleAuto()">
+          AUTO
+        </button>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * Fortune Tiger - Game Logic
+       * @author Gemini Code Assist
+       */
+
+      const SYMBOLS = [
+        { char: "🍊", val: 3, weight: 30 },
+        { char: "🎆", val: 5, weight: 20 },
+        { char: "🧧", val: 8, weight: 15 },
+        { char: "💰", val: 10, weight: 10 },
+        { char: "💚", val: 25, weight: 8 },
+        { char: "🏺", val: 100, weight: 4 },
+        { char: "🐯", val: 250, weight: 2, isWild: true },
+      ];
+
+      const PAYLINES = [
+        [0, 1, 2], // Horizontal Superior
+        [3, 4, 5], // Horizontal Meio
+        [6, 7, 8], // Horizontal Inferior
+        [0, 4, 8], // Diagonal 1
+        [2, 4, 6], // Diagonal 2
+      ];
+
+      class FortuneTiger {
+        constructor() {
+          this.balance = 1000.0;
+          this.bet = 1.0;
+          this.isSpinning = false;
+          this.isAuto = false;
+          this.respinCount = 0;
+          this.multiplier = 1;
+          this.soundEnabled = true;
+          this.audioCache = {};
+          this.soundUrls = {
+            spin: "https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3",
+            win: "https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3",
+            click:
+              "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
+            respin:
+              "https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3",
+          };
+          this.reels = [[], [], []];
+          this.grid = [];
+          this.init();
+        }
+
+        init() {
+          this.preloadSounds();
+          this.buildPaytable();
+          this.updateUI();
+          this.populateInitialGrid();
+        }
+
+        buildPaytable() {
+          const grid = document.getElementById("paytable-grid");
+          grid.innerHTML = "";
+          // Ordena do maior para o menor valor
+          [...SYMBOLS]
+            .sort((a, b) => b.val - a.val)
+            .forEach((sym) => {
+              const item = document.createElement("div");
+              item.className = "paytable-item";
+              item.innerHTML = `
+              <span style="font-size: 30px;">${sym.char}</span>
+              <span>${sym.isWild ? "TIGRE (WILD)" : ""}</span>
+              <span style="color: var(--gold); margin-left: auto;">x${sym.val}</span>
+            `;
+              grid.appendChild(item);
+            });
+        }
+
+        preloadSounds() {
+          for (const [name, url] of Object.entries(this.soundUrls)) {
+            const audio = new Audio(url);
+            audio.preload = "auto";
+            audio.onerror = () => {
+              // Loga o aviso, mas evita que o cache mantenha um objeto quebrado
+              console.warn(
+                `Aviso: O som '${name}' não pôde ser carregado da URL externa.`,
+              );
+              this.audioCache[name] = null;
+            };
+            this.audioCache[name] = audio;
+          }
+        }
+
+        populateInitialGrid() {
+          for (let i = 0; i < 3; i++) {
+            const reelEl = document.getElementById(`reel-${i}`);
+            reelEl.innerHTML = "";
+            for (let j = 0; j < 3; j++) {
+              const sym = this.getRandomSymbol();
+              const div = document.createElement("div");
+              div.className = "symbol";
+              div.innerText = sym.char;
+              reelEl.appendChild(div);
+              this.grid[i + j * 3] = sym;
+            }
+          }
+        }
+
+        getRandomSymbol() {
+          const totalWeight = SYMBOLS.reduce((s, sym) => s + sym.weight, 0);
+          let random = Math.random() * totalWeight;
+          for (const sym of SYMBOLS) {
+            if (random < sym.weight) return sym;
+            random -= sym.weight;
+          }
+          return SYMBOLS[0];
+        }
+
+        adjustBet(dir) {
+          if (this.isSpinning) return;
+          const bets = [0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0];
+          let idx = bets.indexOf(this.bet);
+          idx = Math.max(0, Math.min(bets.length - 1, idx + dir));
+          this.bet = bets[idx];
+          this.playSound("click");
+          this.updateUI();
+        }
+
+        playSound(name) {
+          if (!this.soundEnabled || !this.audioCache[name]) return;
+          try {
+            const sound = this.audioCache[name];
+            if (sound.error || !sound.src) return;
+
+            sound.currentTime = 0; // Permite tocar o som novamente do início
+            sound.volume = 0.4;
+
+            const playPromise = sound.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((e) => {
+                // Filtra o erro de Autoplay (NotAllowedError) para não poluir o console
+                if (e.name !== "NotAllowedError") {
+                  console.warn(
+                    `Erro ao reproduzir áudio '${name}':`,
+                    e.message,
+                  );
+                }
+              });
+            }
+          } catch (err) {
+            console.error("Erro ao tentar tocar som:", name, err);
+          }
+        }
+
+        togglePaytable() {
+          if (this.isSpinning) return;
+          const pt = document.getElementById("paytable");
+          pt.style.display = pt.style.display === "flex" ? "none" : "flex";
+          this.playSound("click");
+        }
+
+        toggleSound() {
+          this.soundEnabled = !this.soundEnabled;
+          const btn = document.getElementById("mute-button");
+          if (btn) btn.innerText = this.soundEnabled ? "🔊" : "🔇";
+          this.playSound("click");
+        }
+
+        updateUI() {
+          document.getElementById("balance").innerText =
+            `R$ ${this.balance.toFixed(2)}`;
+          document.getElementById("bet-value").innerText =
+            `R$ ${this.bet.toFixed(2)}`;
+        }
+
+        async spin(isRespin = false) {
+          if (this.isSpinning && !isRespin) return;
+          if (!isRespin && this.balance < this.bet) return;
+
+          this.isSpinning = true;
+          if (!isRespin) {
+            this.balance -= this.bet;
+            this.respinCount = 0;
+            this.multiplier = 1;
+            this.clearWinEffects();
+            this.playSound("spin");
+          } else {
+            this.playSound("respin");
+          }
+          this.updateUI();
+
+          // Animação de Spin
+          const spinPromises = [0, 1, 2].map((i) => this.animateReel(i));
+
+          await Promise.all(spinPromises);
+
+          this.checkResults();
+        }
+
+        async animateReel(id) {
+          const reel = document.getElementById(`reel-${id}`);
+          // Simulação de rotação rápida
+          reel.style.transition = "transform 0.1s";
+          for (let i = 0; i < 15; i++) {
+            await new Promise((r) => setTimeout(r, 50));
+            const rowIdx = i % 3;
+            if (!reel.children[rowIdx].classList.contains("wild-sticky")) {
+              const sym = this.getRandomSymbol();
+              reel.children[rowIdx].innerText = sym.char;
+            }
+
+            if (i === 14) {
+              // Preenche o resultado final
+              for (let j = 0; j < 3; j++) {
+                if (!reel.children[j].classList.contains("wild-sticky")) {
+                  const finalSym = this.getRandomSymbol();
+                  reel.children[j].innerText = finalSym.char;
+                  this.grid[id + j * 3] = finalSym;
+                }
+              }
+            }
+          }
+        }
+
+        checkResults() {
+          let totalWin = 0;
+          let winningLines = [];
+
+          // Note: this.grid está indexado como [col0-row0, col1-row0, col2-row0, col0-row1, ...]
+          // Mapeamos para facilitar a leitura das PAYLINES (0-8)
+          // 0 1 2
+          // 3 4 5
+          // 6 7 8
+
+          PAYLINES.forEach((line, idx) => {
+            const s1 = this.grid[line[0]];
+            const s2 = this.grid[line[1]];
+            const s3 = this.grid[line[2]];
+
+            // Lógica WILD: O Tigre substitui qualquer um
+            const isWild = (s) => s.isWild;
+
+            // Verifica se os 3 são iguais ou se há Wilds completando
+            const checkMatch = (a, b, c) => {
+              if (a.isWild && b.isWild && c.isWild) return a; // Linha de Wilds
+              let baseSym = [a, b, c].find((s) => !s.isWild);
+              if (!baseSym) return null;
+              if (
+                (a.char === baseSym.char || a.isWild) &&
+                (b.char === baseSym.char || b.isWild) &&
+                (c.char === baseSym.char || c.isWild)
+              ) {
+                return baseSym;
+              }
+              return null;
+            };
+
+            const match = checkMatch(s1, s2, s3);
+            if (match) {
+              const multiplier =
+                s1.isWild && s2.isWild && s3.isWild ? 250 : match.val;
+              totalWin += this.bet * multiplier * this.multiplier;
+              winningLines.push(line);
+            }
+          });
+
+          if (totalWin > 0) {
+            this.handleWin(totalWin, winningLines);
+          } else {
+            // Mecânica de Respin: Gatilho se houver Tigre (WILD) mas sem vitória
+            const hasWild = this.grid.some((s) => s.isWild);
+            if (hasWild && this.respinCount < 3) {
+              this.respinCount++;
+              this.multiplier = Math.min(10, this.multiplier + 1);
+
+              // Aplica efeito visual de "Sticky" nos WILDs
+              this.grid.forEach((s, idx) => {
+                if (s.isWild) {
+                  const col = idx % 3;
+                  const row = Math.floor(idx / 3);
+                  document
+                    .getElementById(`reel-${col}`)
+                    .children[row].classList.add("wild-sticky");
+                }
+              });
+
+              setTimeout(() => this.spin(true), 1200);
+              return;
+            }
+
+            this.isSpinning = false;
+            this.finalizeSpin();
+          }
+        }
+
+        handleWin(amount, lines) {
+          this.balance += amount;
+          this.playSound("win");
+          document.getElementById("last-win").innerText =
+            `R$ ${amount.toFixed(2)}`;
+          this.updateUI();
+
+          // Dispara chuva de moedas se for um prêmio grande (ex: >= 5x a aposta)
+          if (amount >= this.bet * 5) {
+            this.createCoinRain();
+          }
+
+          // Highlight visual
+          lines.flat().forEach((idx) => {
+            // Lógica de mapeamento de index para DOM
+            const col = idx % 3;
+            const row = Math.floor(idx / 3);
+            document
+              .getElementById(`reel-${col}`)
+              .children[row].classList.add("win-highlight");
+          });
+
+          const winMsg = document.getElementById("big-win-msg");
+          winMsg.style.display = "block";
+          winMsg.innerHTML = `VITÓRIA!<br>R$ ${amount.toFixed(2)}`;
+
+          setTimeout(() => {
+            winMsg.style.display = "none";
+            this.isSpinning = false;
+            this.finalizeSpin();
+          }, 2000);
+        }
+
+        createCoinRain() {
+          const container = document.getElementById("game-container");
+          const count = 40; // Quantidade de moedas
+
+          for (let i = 0; i < count; i++) {
+            const coin = document.createElement("div");
+            coin.className = "coin-particle";
+            coin.style.left = Math.random() * 95 + "%";
+            const duration = 1 + Math.random() * 1.5;
+            const delay = Math.random() * 1;
+            coin.style.animation = `coin-fall ${duration}s linear ${delay}s forwards`;
+            container.appendChild(coin);
+            setTimeout(() => coin.remove(), (duration + delay) * 1000);
+          }
+        }
+
+        finalizeSpin() {
+          if (this.isAuto && this.balance >= this.bet) {
+            setTimeout(() => this.spin(), 1000);
+          }
+        }
+
+        clearWinEffects() {
+          document.querySelectorAll(".symbol").forEach((s) => {
+            s.classList.remove("win-highlight");
+            s.classList.remove("wild-sticky");
+          });
+          document.getElementById("big-win-msg").style.display = "none";
+        }
+
+        toggleAuto() {
+          this.isAuto = !this.isAuto;
+          document.getElementById("auto-button").style.background = this.isAuto
+            ? "var(--tiger-orange)"
+            : "#ddd";
+          if (this.isAuto && !this.isSpinning) this.spin();
+        }
+      }
+
+      const game = new FortuneTiger();
+    </script>
+  </body>
+</html>
